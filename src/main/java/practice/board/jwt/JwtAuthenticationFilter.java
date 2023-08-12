@@ -53,7 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     (member) -> {
 //                        jwtService.sendAccessToken(response, accessToken);  //TODO 필요한 이유?? 기존의 accessToken과 동일한데 굳이 다시 보낼 필요 없겠다.
                         log.info("JwtAuthenticationFilter 호출. accessToken={}", accessToken);
-                        saveAuthentication(member, accessToken);  //JWT 의 서명이 유효하기에 Authentication 객체 생성하여 SecurityContext 에 저장
+                        saveAuthentication(accessToken);  //JWT 의 서명이 유효하기에 Authentication 객체 생성하여 SecurityContext 에 저장
                     },
                     () -> {throw new ApiException(MEMBER_NOT_FOUND, "해당 username의 회원이 존재하지 않습니다. username= " + username);
                         //TODO 어떤 예외를 터뜨려야 하나??

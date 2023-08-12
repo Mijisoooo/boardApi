@@ -3,6 +3,7 @@ package practice.board.web.controller.api;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import practice.board.domain.Member;
@@ -66,7 +67,7 @@ public class MemberApiController {
 
 
     /**
-     * 전체 회원 조회
+     * 전체 회원 조회 - ADMIN 가능
      */
     @GetMapping("/members")
     @ResponseStatus(HttpStatus.OK)
@@ -80,7 +81,7 @@ public class MemberApiController {
     }
 
     /**
-     * 회원 조회 by id
+     * 회원 조회 by id - ADMIN 가능
      */
     @GetMapping("/members/{id}")
     @ResponseStatus(HttpStatus.OK)
@@ -91,10 +92,10 @@ public class MemberApiController {
     }
 
     /**
-     * 회원정보 수정 (nickname, age, address, password)
+     * 회원정보 수정 (nickname, age, address, password) - 본인만 가능
      */
+    @PreAuthorize("@AuthService.hasId(#id)")  //본인만 가능
     @PatchMapping("/members/{id}")
-    @PreAuthorize("#id == authentication.principal.memberId")
     @ResponseStatus(HttpStatus.OK)
     public Response<MemberResDto> updateMember(@PathVariable Long id, @Valid @RequestBody MemberUpdateReqDto request) {
         memberService.update(id, request.getCheckPassword(), request.getNewPassword(), request.getNickname(), request.getAge(), request.getAddress());
@@ -105,9 +106,10 @@ public class MemberApiController {
 
 
     /**
-     * 회원 탈퇴
+     * 회원 탈퇴 - 본인 or ADMIN 가능
      */
     @DeleteMapping("/members/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @AuthService.hasId(#id)")  //ADMIN or 본인 가능
     @ResponseStatus(HttpStatus.OK)
     public Response deleteMember(@PathVariable Long id, @Valid @RequestBody MemberDeleteDto request) {
         memberService.delete(id, request.getPassword());

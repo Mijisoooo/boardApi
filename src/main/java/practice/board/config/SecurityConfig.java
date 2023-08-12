@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -31,6 +32,7 @@ import static org.springframework.http.HttpMethod.*;
 @Configuration
 @RequiredArgsConstructor
 @EnableWebSecurity(debug = true)
+//@EnableMethodSecurity  //@PreAuthorize, @PostAuthorize, @Secured, @RolesAllowed 어노테이션 사용을 위해 추가
 public class SecurityConfig {
 
     private final ObjectMapper objectMapper;
@@ -54,7 +56,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
 
                 //cors 설정
-                .cors(config -> config.configurationSource(corsConfigurationSource()))
+                .cors(httpSecurityCorsConfigurer -> httpSecurityCorsConfigurer.configurationSource(corsConfigurationSource()))
 
                 //filter 추가
                 .addFilterAfter(jsonUsernamePasswordLoginFilter(), LogoutFilter.class)
@@ -65,8 +67,7 @@ public class SecurityConfig {
                         .requestMatchers(whiteList).permitAll()
                         .requestMatchers(POST, "/api/members").permitAll()  //회원 가입 - 인증 필요 없음
                         .requestMatchers(GET, "/api/members/**").hasRole("ADMIN")  //회원 조회 - ADMIN
-                        .requestMatchers(PATCH, "/api/members/**").authenticated()  //회원 정보 수정 - 본인만
-//                        .requestMatchers(DELETE, "/api/members/**").authenticated()  //회원 탈퇴 - 본인 or ADMIN
+                        .requestMatchers(PATCH, "/api/members/{id}").access("@authService.hasId(authentication.)")
                         .anyRequest().authenticated())  //그 외 모든 요청은 인증 필요
 
                 .exceptionHandling(config -> config
@@ -85,7 +86,8 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowCredentials(true);
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        config.setAllowedOrigins(List.of("https://localhost:3000"));
+//        config.setAllowedOrigins("^https?:\\/\\/https://main--chimerical-malabi-ffde60.netlify.app/$");  //TODO regex 사용하는 법 찾아보기
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("*"));
