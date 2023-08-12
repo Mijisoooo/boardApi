@@ -1,4 +1,4 @@
-package practice.board.jwt.handler;
+package practice.board.jwt;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
-import practice.board.jwt.service.JwtService;
 import practice.board.repository.MemberRepository;
 
 import java.io.IOException;
@@ -22,19 +21,17 @@ public class LoginSuccessJwtProvideHandler extends SimpleUrlAuthenticationSucces
     private final MemberRepository memberRepository;
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
         String username = getUsername(authentication);
 
         //JWT 발급
         String accessToken = jwtService.createAccessToken(username);
         String refreshToken = jwtService.createRefreshToken();
-        jwtService.sendAccessAndRefreshToken(response, accessToken, refreshToken);  //TODO refreshToken도 헤더에 담아서 보냄??
+        jwtService.sendAccessAndRefreshToken(response, accessToken, refreshToken);
 
         memberRepository.findByUsername(username).ifPresent(member -> member.updateRefreshToken(refreshToken));
 
-        log.info("로그인 성공. username: {}", username);
-        log.info("accessToken 발급. accessToken: {}", accessToken);
-        log.info("refreshToken 발급. refreshToken: {}", refreshToken);
+        log.info("로그인 성공. username: {}, accessToken, refreshToken 발급. accessToken: {}, refreshToken: {}", username, accessToken, refreshToken);
 
     }
 

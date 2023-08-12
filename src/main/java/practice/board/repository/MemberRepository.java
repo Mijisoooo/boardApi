@@ -2,6 +2,7 @@ package practice.board.repository;
 
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import practice.board.domain.Member;
@@ -96,25 +97,19 @@ public class MemberRepository {
     }
 
 
-    public boolean login(String username, String password) {
-        return findByUsername(username).stream()
-                .anyMatch(m -> m.getPassword() == password);
-    }
 
     public boolean existByUsername(String username) {
         List<Member> member = em.createQuery("select m from Member m where m.username = :username", Member.class)
                 .setParameter("username", username)
                 .getResultList();
-        if (member.size() != 0) { return true; }
-        return false;
+        return member.size() != 0;
     }
 
     public boolean existsByEmail(String email) {
         List<Member> member = em.createQuery("select m from Member m where m.email = :email", Member.class)
                 .setParameter("email", email)
                 .getResultList();
-        if (member.size() != 0) { return true; }
-        return false;
+        return member.size() != 0;
     }
 
 }

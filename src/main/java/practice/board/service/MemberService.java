@@ -7,11 +7,9 @@ import org.springframework.transaction.annotation.Transactional;
 import practice.board.domain.Address;
 import practice.board.domain.Member;
 import practice.board.exception.ApiException;
-import practice.board.exception.ErrorCode;
 import practice.board.repository.MemberRepository;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.regex.Pattern;
 
 import static practice.board.exception.ErrorCode.*;
@@ -28,15 +26,14 @@ public class MemberService {
      * 회원가입
      */
     @Transactional
-    public Long join(Member member) {
+    public Long saveMember(final Member member) {
 
         //중복 여부 검증
-        validateDuplicateEmail(member.getEmail());
-        validateDuplicateUsername(member.getUsername());
-        validateDuplicateNickname(member.getNickname());
+        validateDuplicateMember(member);
 
-        member.encodePassword(passwordEncoder);  //password encoding
+        member.encodePassword(passwordEncoder);  //encode password
         member.addUserRole();  //role 을 USER로 설정 (TODO ADMIN인 경우 따른 방식으로 가입)
+
         memberRepository.save(member);
         return member.getId();
     }
@@ -44,19 +41,27 @@ public class MemberService {
     /**
      * 중복 회원 검증 (email, username, nickname)
      */
+    private void validateDuplicateMember(Member member) {
+
+        validateDuplicateEmail(member.getEmail());
+        validateDuplicateUsername(member.getUsername());
+        validateDuplicateNickname(member.getNickname());
+
+    }
+
     private void validateDuplicateEmail(String email) {
-        memberRepository.findByEmail(email).ifPresent((m ->
-            {throw new ApiException(DUPLICATE_EMAIL_FOUND, "회원가입 실패 (이미 존재하는 email) email:" + email);}));
+        memberRepository.findByUsername(email).ifPresent((m ->
+        {throw new ApiException(DUPLICATE_USERNAME_FOUND, "회원가입 실패 (이미 존재하는 username) username:" + email);}));
     }
 
     private void validateDuplicateUsername(String username) {
-        memberRepository.findByEmail(username).ifPresent((m ->
-            {throw new ApiException(DUPLICATE_USERNAME_FOUND, "회원가입 실패 (이미 존재하는 username) username:" + username);}));
+        memberRepository.findByUsername(username).ifPresent((m ->
+        {throw new ApiException(DUPLICATE_USERNAME_FOUND, "회원가입 실패 (이미 존재하는 username) username:" + username);}));
     }
 
     private void validateDuplicateNickname(String nickname) {
-        memberRepository.findByEmail(nickname).ifPresent((m ->
-            {throw new ApiException(DUPLICATE_NICKNAME_FOUND, "회원가입 실패 (이미 존재하는 nickname) nickname:" + nickname);}));
+        memberRepository.findByNickname(nickname).ifPresent((m ->
+        {throw new ApiException(DUPLICATE_NICKNAME_FOUND, "회원가입 실패 (이미 존재하는 nickname) nickname:" + nickname);}));
     }
 
 
@@ -79,12 +84,12 @@ public class MemberService {
                 .orElseThrow(() -> new ApiException(MEMBER_NOT_FOUND));
 
         //정보 수정 전, 비밀번호 일치 여부 확인
-        if (!member.matchPassword(passwordEncoder, checkPassword)) {
+        if (!member.validatePassword(passwordEncoder, checkPassword)) {
             throw new ApiException(WRONG_PASSWORD);
         }
 
         //nickname 수정
-        if (nickname != null && nickname != member.getNickname()) {  //기존 닉네임과 다른 닉네임일 때
+        if (nickname != null && nickname.equals(member.getNickname())) {  //기존 닉네임과 다른 닉네임일 때
             validateDuplicateNickname(nickname);
             member.updateNickname(nickname);
         }
@@ -131,7 +136,7 @@ public class MemberService {
                 new ApiException(MEMBER_NOT_FOUND, "회원이 존재하지 않습니다. memberId=" + id));
 
         //비밀번호 일치 여부 확인
-        if (!member.matchPassword(passwordEncoder, checkPassword)) {
+        if (!member.validatePassword(passwordEncoder, checkPassword)) {
             throw new ApiException(WRONG_PASSWORD);
         }
 
@@ -155,8 +160,23 @@ public class MemberService {
 
     /**
      * 로그인
+     * @return 로그인한 member 의 id 값 반환
      */
-    public boolean login(String username, String password) {
-        return memberRepository.login(username, password);
+    public Long login(String username, String password) {
+
+        //member 조회
+        Member member = memberRepository.findByUsername(username).orElseThrow(() -> {
+            throw new ApiException(LOGIN_FAILURE);
+        });
+
+        //password 일치하는지 검증
+        boolean result = member.validatePassword(passwordEncoder, password);
+
+        if (result) {
+            return member.getId();
+        }
+        else {
+            throw new ApiException(LOGIN_FAILURE);
+        }
     }
 }

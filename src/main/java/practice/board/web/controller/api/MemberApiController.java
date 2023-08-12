@@ -3,8 +3,11 @@ package practice.board.web.controller.api;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import practice.board.domain.Member;
+import practice.board.jwt.JwtService;
+import practice.board.repository.MemberRepository;
 import practice.board.response.Response;
 import practice.board.service.MemberService;
 import practice.board.web.dto.member.*;
@@ -18,16 +21,59 @@ import java.util.stream.Collectors;
 public class MemberApiController {
 
     private final MemberService memberService;
+    private final MemberRepository memberRepository;
+    private final JwtService jwtService;
+
+    //TODO 반환타입이 Response 라고만 적혀있으니까 그 안에 어떤 데이터가 담겨나가는지 모르겠네 -> Response<MemberResDto> 요렇게 쓸 수 있도록 바꾸자
+
+    /**
+     * 회원 저장
+     */
+    @PostMapping("/members")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Response<MemberResDto> saveMember(@Valid @RequestBody MemberSaveReqDto request) {
+        Member member = MemberSaveReqDto.from(request);
+        Long savedId = memberService.saveMember(member);
+        Member savedMember = memberService.findById(savedId);
+        MemberResDto dto = new MemberResDto(savedMember);
+        return Response.success(dto);
+    }
+
+    /**
+     * 로그인
+     */
+    @PostMapping("/login")
+    @ResponseStatus(HttpStatus.OK)
+    public Response<MemberLoginResDto> login(@Valid @RequestBody final MemberLoginReqDto request) {
+
+        Long loginMemberId = memberService.login(request.getUsername(), request.getPassword());
+        Member member = memberRepository.findById(loginMemberId).get();
+
+        String accessToken = jwtService.createAccessToken(member.getUsername());  //access token 생성
+        String refreshToken = jwtService.createRefreshToken();  //refresh token 생성
+        member.updateRefreshToken(refreshToken);  //db에 refresh token 저장
+
+        MemberLoginResDto dto = MemberLoginResDto.builder()
+                .id(loginMemberId)
+                .username(request.getUsername())
+                .nickname(member.getNickname())
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+
+        return Response.success(dto);
+    }
+
 
     /**
      * 전체 회원 조회
      */
     @GetMapping("/members")
     @ResponseStatus(HttpStatus.OK)
-    public Response members() {
+    public Response<List<MemberResDto>> members() {
         List<Member> members = memberService.findAll();
         List<MemberResDto> dtos = members.stream()
-                .map(m -> new MemberResDto(m))
+                .map(MemberResDto::new)
                 .collect(Collectors.toList());
 
         return Response.success(dtos);
@@ -38,22 +84,9 @@ public class MemberApiController {
      */
     @GetMapping("/members/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public Response member(@PathVariable Long id) {
+    public Response<MemberResDto> member(@PathVariable Long id) {
         Member member = memberService.findById(id);
         MemberResDto dto = new MemberResDto(member);
-        return Response.success(dto);
-    }
-
-    /**
-     * 회원 저장
-     */
-    @PostMapping("/members")
-    @ResponseStatus(HttpStatus.CREATED)
-    public Response saveMember(@Valid @RequestBody MemberSaveReqDto request) {
-        Member member = MemberSaveReqDto.from(request);
-        Long savedId = memberService.join(member);
-        Member savedMember = memberService.findById(savedId);
-        MemberResDto dto = new MemberResDto(savedMember);
         return Response.success(dto);
     }
 
@@ -61,8 +94,9 @@ public class MemberApiController {
      * 회원정보 수정 (nickname, age, address, password)
      */
     @PatchMapping("/members/{id}")
+    @PreAuthorize("#id == authentication.principal.memberId")
     @ResponseStatus(HttpStatus.OK)
-    public Response updateMember(@PathVariable Long id, @Valid @RequestBody MemberUpdateReqDto request) {
+    public Response<MemberResDto> updateMember(@PathVariable Long id, @Valid @RequestBody MemberUpdateReqDto request) {
         memberService.update(id, request.getCheckPassword(), request.getNewPassword(), request.getNickname(), request.getAge(), request.getAddress());
         Member member = memberService.findById(id);
         MemberResDto dto = new MemberResDto(member);

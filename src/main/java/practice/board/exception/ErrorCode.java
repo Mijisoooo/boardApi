@@ -18,6 +18,12 @@ public enum ErrorCode {
 
     LOGIN_FAILURE(UNAUTHORIZED, "로그인에 실패하였습니다. (아이디 혹은 비밀번호 오류)"),
 
+    INVALID_TOKEN(UNAUTHORIZED, "토큰이 유효하지 않습니다."),
+
+    MALFORMED_TOKEN(UNAUTHORIZED, "올바르지 않은 토큰입니다."),
+
+    EXPIRED_ACCESS_TOKEN(UNAUTHORIZED, "만료된 토큰입니다. 리프레쉬 토큰이 필요합니다."),
+
     ARTICLE_NOT_FOUND(NOT_FOUND, "게시글 정보를 찾을 수 없습니다."),
 
     MEMBER_NOT_FOUND(NOT_FOUND, "회원 정보를 찾을 수 없습니다."),

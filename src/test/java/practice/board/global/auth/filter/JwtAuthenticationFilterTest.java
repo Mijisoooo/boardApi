@@ -17,9 +17,9 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import practice.board.domain.Member;
+import practice.board.jwt.JwtService;
 import practice.board.repository.MemberRepository;
 import practice.board.service.MemberService;
-import practice.board.jwt.service.JwtService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -70,7 +70,7 @@ class JwtAuthenticationFilterTest {
 
     @BeforeEach
     void init() {
-        memberService.join(Member.builder()
+        memberService.saveMember(Member.builder()
                 .username(USERNAME)
                 .password(PASSWORD)
                 .email("email")
@@ -150,7 +150,7 @@ class JwtAuthenticationFilterTest {
                         .header(refreshHeader, BEARER + refreshToken))
                 .andExpect(status().isNotFound()).andReturn();
 
-        String accessToken = result.getResponse().getHeader(accessHeader).toString();
+        String accessToken = result.getResponse().getHeader(accessHeader);
 
         String username = jwtService.extractUsername(accessToken);
         Assertions.assertThat(username).isEqualTo(USERNAME);

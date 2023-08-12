@@ -32,7 +32,7 @@ class MemberServiceTest {
         Member member = Member.builder().build();
 
         //when
-        Long savedId = memberService.join(member);
+        Long savedId = memberService.saveMember(member);
         Member savedMember = memberRepository.findById(savedId).get();
 
         //then
@@ -50,7 +50,7 @@ class MemberServiceTest {
                 .email("email")
                 .nickname("nickname")
                 .build();
-        memberService.join(member1);
+        memberService.saveMember(member1);
 
         //when
         Member member2 = Member.builder()
@@ -61,7 +61,7 @@ class MemberServiceTest {
                 .build();
 
         //then
-        assertThatThrownBy(() -> memberService.join(member2))
+        assertThatThrownBy(() -> memberService.saveMember(member2))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -78,7 +78,7 @@ class MemberServiceTest {
                 .nickname("nickname")
                 .build();
 
-        Long memberId = memberService.join(member);
+        Long memberId = memberService.saveMember(member);
 
         //when
         String newPassword = "dksh3235!!";
@@ -107,7 +107,7 @@ class MemberServiceTest {
                 .nickname("nickname")
                 .build();
 
-        Long memberId = memberService.join(member);
+        Long memberId = memberService.saveMember(member);
 
         //when, then
         String newPassword = "abwk345!.df";
@@ -129,7 +129,7 @@ class MemberServiceTest {
                 .nickname("nickname")
                 .build();
 
-        Long memberId = memberService.join(member);
+        Long memberId = memberService.saveMember(member);
 
         //when, then
         String newPassword = "1234";
@@ -153,7 +153,7 @@ class MemberServiceTest {
                 .nickname("nickname")
                 .build();
 
-        Long memberId = memberService.join(member);
+        Long memberId = memberService.saveMember(member);
 
         //when
         String newNickname = "nickname";
@@ -161,7 +161,7 @@ class MemberServiceTest {
         memberService.update(memberId, password, null, newNickname, null, null);
 
         //then
-        assertThat(member.matchPassword(passwordEncoder, password)).isTrue();  //기존과 동일한 password
+        assertThat(member.validatePassword(passwordEncoder, password)).isTrue();  //기존과 동일한 password
         assertThat(member.getNickname()).isEqualTo("nickname");  //기존과 동일한 닉네임일 경우 변하지 않고 그대로
         assertThat(member.getAge()).isEqualTo(20);  //변하지 않고 그대로
         assertThat(member.getAddress()).isNull();  //변하지 않고 그대로 (기존 address 는 null)

@@ -1,5 +1,6 @@
 package practice.board.web.dto.member;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -10,21 +11,24 @@ import practice.board.domain.Member;
 
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class MemberSaveReqDto {
 
-    @NotEmpty
+    @NotBlank
     private String username;  //아이디
 
-    @NotEmpty
+    @NotBlank
     @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[._?!*])[a-zA-Z\\d._?!*]{8,20}$",
-            message = "비밀번호는 적어도 한개의 대문자, 소문자, 숫자, 특수기호(._?!*)를 포함하며, 8자리 이상 20자리 이하여야 합니다.")
+            message = "비밀번호는 적어도 한개의 대문자, 소문자, 숫자, 특수기호(._?!*)를 포함하며, 8자 이상 20자 이하여야 합니다.")
     private String password;
 
-    @NotEmpty
-    @Pattern(regexp = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,6}$", message = "이메일 형식이 아닙니다.")
+    @NotBlank
+    @Pattern(regexp = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,6}$", message = "이메일 형식으로 입력해주세요.")
     private String email;
 
-    @NotEmpty
+    @NotBlank
     private String nickname;  //별명
 
     @NotNull

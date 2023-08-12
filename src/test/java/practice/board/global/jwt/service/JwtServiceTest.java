@@ -15,7 +15,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.transaction.annotation.Transactional;
 import practice.board.domain.Member;
 import practice.board.domain.Role;
-import practice.board.jwt.service.JwtService;
+import practice.board.jwt.JwtService;
 import practice.board.repository.MemberRepository;
 
 import java.io.IOException;
@@ -26,11 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
 @Transactional
-class JwtServiceImplTest {
+class JwtServiceTest {
 
     @Autowired MemberRepository memberRepository;
-    @Autowired
-    JwtService jwtService;
+    @Autowired JwtService jwtService;
     @Autowired EntityManager em;
 
 
@@ -130,7 +129,6 @@ class JwtServiceImplTest {
         //given
         String refreshToken = jwtService.createRefreshToken();
         jwtService.updateRefreshToken(USERNAME, refreshToken);
-        Claims verify = Jwts.parserBuilder().setSigningKey(secret).build().parseClaimsJws(refreshToken).getBody();
         clear();
 
         //when
@@ -145,7 +143,7 @@ class JwtServiceImplTest {
     }
 
     @Test
-    void sendToken() throws IOException {
+    void sendToken() {
         //given
         MockHttpServletResponse response = new MockHttpServletResponse();
         String accessToken = jwtService.createAccessToken(USERNAME);
@@ -160,7 +158,7 @@ class JwtServiceImplTest {
 
     }
 
-    private HttpServletRequest setToken(String accessToken, String refreshToken) throws IOException {
+    private HttpServletRequest setToken(String accessToken, String refreshToken) {
 
         MockHttpServletResponse response = new MockHttpServletResponse();
         jwtService.sendAccessAndRefreshToken(response, accessToken, refreshToken);
@@ -176,7 +174,7 @@ class JwtServiceImplTest {
     }
 
     @Test
-    void extractAccessToken() throws ServletException, IOException {
+    void extractAccessToken() {
         //given
         String accessToken = jwtService.createAccessToken(USERNAME);
         String refreshToken = jwtService.createRefreshToken();
@@ -190,7 +188,7 @@ class JwtServiceImplTest {
     }
 
     @Test
-    void extractRefreshToken() throws IOException, ServletException {
+    void extractRefreshToken() {
         //given
         String accessToken = jwtService.createAccessToken(USERNAME);
         String refreshToken = jwtService.createRefreshToken();

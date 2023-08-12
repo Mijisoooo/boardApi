@@ -103,11 +103,10 @@ public class Member extends BaseTimeEntity {
 
 
     /**
-     * 회원정보 수정, 회원 탈퇴 전에 비밀번호 확인 진행
-     * 이때 비밀번호 일치여부 판단하는 메서드
+     * 비밀번호 일치 여부 판단
      * @param checkPassword 입력한 password
      */
-    public boolean matchPassword(PasswordEncoder passwordEncoder, String checkPassword) {
+    public boolean validatePassword(PasswordEncoder passwordEncoder, String checkPassword) {
         return passwordEncoder.matches(checkPassword, getPassword());
     }
 
@@ -123,7 +122,8 @@ public class Member extends BaseTimeEntity {
     //== 연관관계 메서드 ==//
 
 
-    //== 생성 메서드 ==// TODO builder 사용??
+    //== 생성 메서드 ==//
+    //생성메서드를 만들어서 관리를 한다면 코드가 변경되더라도 변경 지점이 한 곳이 됨
     public static Member createMember(String username, String email, String nickname, Integer age, Address address) {
         Member member = new Member();
         member.username = username;

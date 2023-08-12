@@ -48,10 +48,9 @@ class CommentServiceTest {
                 .email("email")
                 .nickname("nickname")
                 .build();
-        Long memberId = memberService.join(member);
+        Long memberId = memberService.saveMember(member);
         Long articleId = articleService.save(member.getId(), "title", "content");
-        Long commentId = commentService.save(articleId, memberId, "content", null);
-        return commentId;
+        return commentService.save(articleId, memberId, "content", null);
     }
 
     /**
@@ -59,8 +58,7 @@ class CommentServiceTest {
      */
     Long saveChildComment(Long parentCommentId) {
         Comment parentComment = commentService.findById(parentCommentId).get();
-        Long childCommentId = commentService.save(parentComment.getArticle().getId(), parentComment.getWriter().getId(), "content-child", parentCommentId);
-        return childCommentId;
+        return commentService.save(parentComment.getArticle().getId(), parentComment.getWriter().getId(), "content-child", parentCommentId);
     }
 
     @Test
