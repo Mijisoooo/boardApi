@@ -20,6 +20,7 @@ import practice.board.domain.Member;
 import practice.board.jwt.JwtService;
 import practice.board.repository.MemberRepository;
 import practice.board.service.MemberService;
+import practice.board.web.dto.member.MemberSaveReqDto;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -70,12 +71,8 @@ class JwtAuthenticationFilterTest {
 
     @BeforeEach
     void init() {
-        memberService.saveMember(Member.builder()
-                .username(USERNAME)
-                .password(PASSWORD)
-                .email("email")
-                .nickname("nickname")
-                .build());
+        Member member = Member.createMember(USERNAME, "password1234!", "test@email.com", "nick", 20, null);
+        memberService.saveMember(MemberSaveReqDto.toDto(member));
         clear();
     }
 

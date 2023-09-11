@@ -3,19 +3,24 @@ package practice.board.domain;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static jakarta.persistence.FetchType.LAZY;
+import static lombok.AccessLevel.*;
 
 @Entity
 @Getter
+@Setter(value = PRIVATE)
 @EqualsAndHashCode(of = "id")
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor(access = PROTECTED)
+@AllArgsConstructor(access = PROTECTED)
+@Builder(access = PRIVATE)
 public class Comment extends BaseTimeEntity {
 
-    @Id @GeneratedValue
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "comment_id")
     private Long id;
 
@@ -31,18 +36,23 @@ public class Comment extends BaseTimeEntity {
     @NotNull
     private String content;
 
+    @ColumnDefault("0")
     private int likes;
 
+    @ColumnDefault("0")
     private int dislikes;
 
+    @Builder.Default
     private boolean isRemoved = false;
 
+    @ColumnDefault("0")
     private int depth;
 
     @ManyToOne(fetch = LAZY)
     @JoinColumn(name = "parent_id")
     private Comment parent;
 
+    @Builder.Default
     @OneToMany(mappedBy = "parent")
     private List<Comment> childList = new ArrayList<>();  //부모 댓글을 삭제해도 자식 댓글은 남아있음
 
@@ -52,6 +62,7 @@ public class Comment extends BaseTimeEntity {
     public void updateContent(String content) {
         this.content = content;
     }
+
 
     //== 화면상 삭제  ==//
     public void tempDelete() {
@@ -66,10 +77,12 @@ public class Comment extends BaseTimeEntity {
         member.getCommentList().add(this);
     }
 
+
     public void setArticle(Article article) {
         this.article = article;
         article.getCommentList().add(this);
     }
+
 
     public void setParentAndDepth(Comment parentComment) {
         this.parent = parentComment;
@@ -83,19 +96,19 @@ public class Comment extends BaseTimeEntity {
     /**
      * parentComment 없으면 null 전달
      */
-    public static Comment createComment(Article article, Member member, String content, Comment parentComment) {  //TODO @Builder 삭제??
-        Comment comment = new Comment();
-        comment.setArticle(article);
-        comment.setWriter(member);
-        comment.content = content;
-        comment.likes = 0;
-        comment.dislikes = 0;
-        comment.isRemoved = false;
+    public static Comment createComment(Article article, Member member, String content, Comment parentComment) {
+
+        Comment comment = Comment.builder()
+                .article(article)
+                .writer(member)
+                .content(content)
+                .build();
+
         if (parentComment != null) {
             comment.setParentAndDepth(parentComment);
         }
         else {  //parentComment = null 인 경우
-            comment.depth = 0;
+            comment.setDepth(0);
         }
         return comment;
     }
@@ -106,6 +119,7 @@ public class Comment extends BaseTimeEntity {
         likes++;
         return likes;
     }
+
 
     public int addDislikes() {
         dislikes++;

@@ -56,14 +56,8 @@ public class LoginTest {
 
     @BeforeEach
     void init() {
-        Member member = Member.builder()
-                .username(USERNAME)
-                .password(passwordEncoder.encode(PASSWORD))
-                .nickname("nickname")
-                .email("email.com")
-                .role(Role.USER)
-                .age(20)
-                .build();
+        Member member = Member.createMember(USERNAME, passwordEncoder.encode(PASSWORD), "email@email.com", "nick", 20, null);
+        member.addUserRole();
         memberRepository.save(member);
         clear();
     }

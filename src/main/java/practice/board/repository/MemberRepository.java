@@ -1,8 +1,15 @@
 package practice.board.repository;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceUnitUtil;
+import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import practice.board.domain.Member;
@@ -11,105 +18,22 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-@Repository
-@RequiredArgsConstructor
-public class MemberRepository {
+public interface MemberRepository extends JpaRepository<Member, Long> {
 
-    private final EntityManager em;
+    Page<Member> findAll(Pageable pageable);
 
-    /**
-     * 등록
-     */
-    public Long save(Member member) {
-        em.persist(member);
-        return member.getId();
-    }
-//    public Long save(Member member) {
-//        if (findByEmail(member.getEmail()).isEmpty() || findByEmail(member.getEmail()) == null) { //TODO unique 제약조건 걸었는데 그 에러보다 아래 IllegalStateException이 우선하네? - 검증 공부
-//            em.persist(member);
-//            return member.getId();
-//        }
-//        throw new IllegalStateException("회원가입 불가 (중복 email), email=" + member.getEmail());
-//    }
+    Optional<Member> findByEmail(String email);
 
+    Optional<Member> findByUsername(String username);
 
-    /**
-     * 조회
-     */
-    public Optional<Member> findById(Long id) {
-        return Optional.ofNullable(em.find(Member.class, id));
-    }
+    Optional<Member> findByNickname(String nickname);
 
-    public List<Member> findAll() {
-        return em.createQuery("select m from Member m", Member.class)
-                .getResultList();
-    }
+    Optional<Member> findByRefreshToken(String refreshToken);
 
-    public Optional<Member> findByEmail(String email) {
-        List<Member> members = em.createQuery("select m from Member m where m.email = :email", Member.class)
-                .setParameter("email", email)
-                .getResultList();
-        return members.stream().findAny();
-    }
+    @Query("select m from Member m join fetch m.articleList join fetch m.commentList where m.id = :id")
+    Optional<Member> findMemberJoinFetchArticleAndComment(@Param("id") Long id);
 
-    public Optional<Member> findByUsername(String username) {
-        List<Member> members = em.createQuery("select m from Member m where m.username = :username", Member.class)
-                .setParameter("username", username)
-                .getResultList();
-        return members.stream().findAny();
-    }
-
-    public Optional<Member> findByNickname(String nickname) {
-        List<Member> members = em.createQuery("select m from Member m where m.nickname = :nickname", Member.class)
-                .setParameter("nickname", nickname)
-                .getResultList();
-        return members.stream().findAny();
-    }
-
-    public Optional<Member> findByRefreshToken(String refreshToken) {
-        List<Member> members = em.createQuery("select m from Member m where m.refreshToken = :refreshToken", Member.class)
-                .setParameter("refreshToken", refreshToken)
-                .getResultList();
-        return members.stream().findAny();
-    }
-
-    /**
-     * 수정
-     */
-    @Transactional
-    public void updateRefreshToken(Long memberId, String refreshToken) {
-        Member member = findById(memberId).orElseThrow(() ->
-                new NoSuchElementException("해당 회원이 없습니다. memberId:" + memberId));
-        member.updateRefreshToken(refreshToken);
-    }
-
-
-    /**
-     * 삭제
-     */
-    public void deleteById(Long id) {
-        Member member = em.find(Member.class, id);
-        em.remove(member);
-    }
-
-    public void delete(Member member) {
-        em.remove(member);
-    }
-
-
-
-    public boolean existByUsername(String username) {
-        List<Member> member = em.createQuery("select m from Member m where m.username = :username", Member.class)
-                .setParameter("username", username)
-                .getResultList();
-        return member.size() != 0;
-    }
-
-    public boolean existsByEmail(String email) {
-        List<Member> member = em.createQuery("select m from Member m where m.email = :email", Member.class)
-                .setParameter("email", email)
-                .getResultList();
-        return member.size() != 0;
-    }
+    boolean existsByUsername(String username);
+    boolean existsByEmail(String email);
 
 }

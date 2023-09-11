@@ -19,7 +19,7 @@ public class JsonUsernamePasswordAuthenticationFilter extends AbstractAuthentica
 
     private final ObjectMapper objectMapper;
 
-    private static final String DEFAULT_LOGIN_REQUEST_URL = "/api/login";  // /api/login/oauth2/ + ????? 로 오는 요청을 처리
+    private static final String DEFAULT_LOGIN_REQUEST_URL = "/api/members/login";  // /api/members/login/oauth2/ + ????? 로 오는 요청을 처리
     private static final String HTTP_METHOD = "POST";  //HTTP 메서드 : POST
     private static final String CONTENT_TYPE = "application/json";  //json 타입의 데이터로만 로그인을 진행
 
@@ -49,15 +49,14 @@ public class JsonUsernamePasswordAuthenticationFilter extends AbstractAuthentica
         }
 
         String messageBody = StreamUtils.copyToString(request.getInputStream(), StandardCharsets.UTF_8);
-        Map<String, String> usernamePasswordMap = objectMapper.readValue(messageBody, Map.class);  //TODO 왜 Map으로 받아왔을까?
+        Map<String, String> usernamePasswordMap = objectMapper.readValue(messageBody, Map.class);
         String username = usernamePasswordMap.get(USERNAME_KEY);
         String password = usernamePasswordMap.get(PASSWORD_KEY);
 
         //JSON으로 로그인하는 방식만 달라졌을 뿐, username, password를 사용하여 로그인하는 전략은 동일하기 때문에 굳이 따로 구현하지 않고 기존 것 사용
         UsernamePasswordAuthenticationToken authRequest
                 = UsernamePasswordAuthenticationToken.unauthenticated(username, password);
-//        // Allow subclasses to set the "details" property
-//        setDetails(request, authRequest);
+
         return this.getAuthenticationManager().authenticate(authRequest);  //사용되는 AuthenticationManager는 ProviderManager
     }
 

@@ -1,5 +1,6 @@
 package practice.board.web.dto.member;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,9 +13,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MemberLoginReqDto {
 
-    @NotEmpty
+    @NotBlank
     private String username;
 
-    @NotEmpty
+    @NotBlank
     private String password;
 }

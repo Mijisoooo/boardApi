@@ -1,38 +1,65 @@
 package practice.board.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import practice.board.domain.Address;
 import practice.board.domain.Member;
+import practice.board.domain.Role;
 import practice.board.exception.ApiException;
+import practice.board.jwt.JwtService;
+import practice.board.repository.ArticleRepository;
+import practice.board.repository.CommentRepository;
 import practice.board.repository.MemberRepository;
+import practice.board.web.dto.jwt.TokenDto;
+import practice.board.web.dto.member.MemberResDto;
+import practice.board.web.dto.member.MemberSaveReqDto;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static practice.board.exception.ErrorCode.*;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class MemberService {
 
-    private final MemberRepository memberRepository;
+    private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final MemberRepository memberRepository;
+    private final ArticleRepository articleRepository;
+    private final CommentRepository commentRepository;
+
+    private final String DELETED_MEMBER_USERNAME = "탈퇴한 사용자";
 
     /**
      * 회원가입
      */
     @Transactional
-    public Long saveMember(final Member member) {
+    public Long saveMember(final MemberSaveReqDto dto) {  //Member 에서 MemberSaveReqDto 로 변경
+
+        //MemberSaveReqDto -> Member 변환
+        Member member = MemberSaveReqDto.from(dto);
 
         //중복 여부 검증
         validateDuplicateMember(member);
 
-        member.encodePassword(passwordEncoder);  //encode password
-        member.addUserRole();  //role 을 USER로 설정 (TODO ADMIN인 경우 따른 방식으로 가입)
+        //패스워드 암호화
+        member.encodePassword(passwordEncoder);
+
+        //role 을 USER 로 설정 (TODO ADMIN인 경우 따른 방식으로 가입)
+        member.addUserRole();
 
         memberRepository.save(member);
         return member.getId();
@@ -43,20 +70,20 @@ public class MemberService {
      */
     private void validateDuplicateMember(Member member) {
 
-        validateDuplicateEmail(member.getEmail());
         validateDuplicateUsername(member.getUsername());
+        validateDuplicateEmail(member.getEmail());
         validateDuplicateNickname(member.getNickname());
 
-    }
-
-    private void validateDuplicateEmail(String email) {
-        memberRepository.findByUsername(email).ifPresent((m ->
-        {throw new ApiException(DUPLICATE_USERNAME_FOUND, "회원가입 실패 (이미 존재하는 username) username:" + email);}));
     }
 
     private void validateDuplicateUsername(String username) {
         memberRepository.findByUsername(username).ifPresent((m ->
         {throw new ApiException(DUPLICATE_USERNAME_FOUND, "회원가입 실패 (이미 존재하는 username) username:" + username);}));
+    }
+
+    private void validateDuplicateEmail(String email) {
+        memberRepository.findByEmail(email).ifPresent((m ->
+        {throw new ApiException(DUPLICATE_USERNAME_FOUND, "회원가입 실패 (이미 존재하는 email) email:" + email);}));
     }
 
     private void validateDuplicateNickname(String nickname) {
@@ -65,10 +92,18 @@ public class MemberService {
     }
 
 
+    @Transactional
+    public void updateRefreshToken(Long memberId, String refreshToken) {
+        Member member = findById(memberId);
+        member.updateRefreshToken(refreshToken);
+    }
+
 
     /**
      * age, address 조건 없이 수정 가능, nickname(중복 아닌 경우에만 수정 가능), password (조건에 맞는 경우에만 수정 가능)
      */
+    //TODO 만약 username을 파라미터로 던져주는 경우는 어떤 예외를 던져줘야할까?
+    //TODO 기존 회원 정보와 변함이 없는 경우에는 "기존 정보와 동일함" 메세지를 던져줄까?
     @Transactional
     public void update(Long id, String checkPassword, String newPassword, String nickname, Integer age, Address address) {
 
@@ -89,7 +124,7 @@ public class MemberService {
         }
 
         //nickname 수정
-        if (nickname != null && nickname.equals(member.getNickname())) {  //기존 닉네임과 다른 닉네임일 때
+        if (nickname != null && !nickname.equals(member.getNickname())) {  //기존 닉네임과 다른 닉네임일 때
             validateDuplicateNickname(nickname);
             member.updateNickname(nickname);
         }
@@ -125,58 +160,126 @@ public class MemberService {
         return newPassword != null && passwordPattern.matcher(newPassword).matches();
     }
 
+
+//    /**
+//     * 삭제 (회원 탈퇴 전에 비밀번호 체크 진행, ADMIN 인 경우 체크 안함)
+//     */
+//    @Transactional
+//    public void delete(Long id, String checkPassword) {
+//
+//        //member 조회
+//        Member member = findById(id);
+//
+//        //비밀번호 일치 여부 확인
+//        if (!member.validatePassword(passwordEncoder, checkPassword) && !Role.ADMIN.equals(member.getRole())) {
+//            throw new ApiException(WRONG_PASSWORD);
+//        }
+//
+//        //회원 탈퇴 진행
+//        memberRepository.delete(member);
+//    }
+
+
     /**
-     * 삭제 (회원 탈퇴 전에 비밀번호 체크 진행)
+     * 삭제 (회원 탈퇴 전에 비밀번호 체크 진행, ADMIN 인 경우 체크 안함)
+     * Member 탈퇴해도 작성한 글, 댓글은 남아있도록 하기 위해서
      */
     @Transactional
-    public void delete(Long id, String checkPassword) {
+    public void deleteMemberWithHistory(Long id, String checkPassword) {
 
         //member 조회
-        Member member = memberRepository.findById(id).orElseThrow(() ->
-                new ApiException(MEMBER_NOT_FOUND, "회원이 존재하지 않습니다. memberId=" + id));
+        Member memberToDelete = findById(id);
+        Member deletedMember = getOrCreateDeletedMember();
 
         //비밀번호 일치 여부 확인
-        if (!member.validatePassword(passwordEncoder, checkPassword)) {
+        if (!memberToDelete.validatePassword(passwordEncoder, checkPassword) && !Role.ADMIN.equals(memberToDelete.getRole())) {
             throw new ApiException(WRONG_PASSWORD);
         }
 
-        //회원 탈퇴 진행
-        memberRepository.delete(member);
+        //작성 글, 댓글의 member 이름 변경
+        articleRepository.findByWriter(id).forEach(article -> {
+            article.setWriter(deletedMember);
+            articleRepository.save(article);
+        });
+
+        commentRepository.findByWriter(id).forEach(comment -> {
+            comment.setWriter(deletedMember);
+            commentRepository.save(comment);
+        });
+
+        //member 삭제
+        memberRepository.deleteById(id);
+    }
+
+    private Member getOrCreateDeletedMember() {
+        Optional<Member> deletedMemberOptional = memberRepository.findByUsername(DELETED_MEMBER_USERNAME);
+
+        if (deletedMemberOptional.isPresent()) {
+            return deletedMemberOptional.get();
+        }
+        else {
+            Member deletedMember = Member.createDeletedMember();
+            return memberRepository.save(deletedMember);
+        }
     }
 
 
-    /**
-     * 조회
-     */
-    public List<Member> findAll() {  //TODO 굳이 repository 와 똑같은 메서드인데 서비스단에도 적을 필요 있을까?
-        return memberRepository.findAll();
-    }
 
-
-    public Member findById(Long id) {  //TODO 굳이 repository 와 똑같은 메서드인데 서비스단에도 적을 필요 있을까?
-        return memberRepository.findById(id).orElse(null);
+    public Member findById(Long id) {
+        return memberRepository.findById(id)
+                .orElseThrow(() ->
+                        new ApiException(MEMBER_NOT_FOUND, "회원이 존재하지 않습니다. memberId=" + id));
     }
 
 
     /**
      * 로그인
+     * jwt 발급, Authentication 객체 생성해서 SecurityContext 에 저장
      * @return 로그인한 member 의 id 값 반환
      */
-    public Long login(String username, String password) {
+    @Transactional
+    public TokenDto login(String username, String password) {
 
-        //member 조회
+        //member 조회  TODO 중복이 많다.. jwtService.createAccessToken() -> cuastomUserDetailsService.loadUserByUesrname()에서도 검사하는데
         Member member = memberRepository.findByUsername(username).orElseThrow(() -> {
             throw new ApiException(LOGIN_FAILURE);
         });
 
         //password 일치하는지 검증
-        boolean result = member.validatePassword(passwordEncoder, password);
-
-        if (result) {
-            return member.getId();
-        }
-        else {
+        if (!member.validatePassword(passwordEncoder, password)) {
             throw new ApiException(LOGIN_FAILURE);
         }
+
+        //1. JWT 발급
+        //access token 생성
+        String accessToken = jwtService.createAccessToken(member.getUsername());
+        //refresh token 생성
+        String refreshToken = jwtService.createRefreshToken();
+        //db에 refresh token 저장
+        member.updateRefreshToken(refreshToken);
+
+        //2. Authentication 객체 생성 후 SecurityContext 에 저장
+        jwtService.saveAuthentication(accessToken);
+
+        //TODO 응답 헤더로 access token, refresh token 보내기 ??
+//        jwtService.sendAccessAndRefreshToken(response, accessToken, refreshToken);
+
+        //TokenDto 생성해서 리턴
+        TokenDto tokenDto = TokenDto.builder()
+                .memberId(member.getId())
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+
+        return tokenDto;
     }
+
+    /**
+     * MemberResDto 로 변환
+     */
+    public MemberResDto toMemberResDto(Long memberId) {
+        Member member = findById(memberId);
+        return MemberResDto.from(member);
+    }
+
 }

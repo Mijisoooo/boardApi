@@ -72,6 +72,7 @@ public class ApiExceptionAdvice {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Response exception(Exception e) {
         log.error("[ApiExceptionAdvice.exception 호출] {}", e.getMessage());
+        e.printStackTrace();
         return Response.failure(500, e.getMessage());
     }
     

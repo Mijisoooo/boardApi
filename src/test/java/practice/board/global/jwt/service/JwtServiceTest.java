@@ -3,7 +3,6 @@ package practice.board.global.jwt.service;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import jakarta.persistence.EntityManager;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,8 +16,6 @@ import practice.board.domain.Member;
 import practice.board.domain.Role;
 import practice.board.jwt.JwtService;
 import practice.board.repository.MemberRepository;
-
-import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -50,14 +47,7 @@ class JwtServiceTest {
 
     @BeforeEach
     void init() {
-        Member member = Member.builder()
-                .username(USERNAME)
-                .password("1234")
-                .email("test.com")
-                .nickname("nick")
-                .role(Role.USER)
-                .build();
-
+        Member member = Member.createMember(USERNAME, "1234!abc", "email@test.com", "nick", null, null);
         memberRepository.save(member);
         clear();
     }

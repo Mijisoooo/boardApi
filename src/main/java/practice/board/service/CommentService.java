@@ -6,13 +6,15 @@ import org.springframework.transaction.annotation.Transactional;
 import practice.board.domain.Article;
 import practice.board.domain.Comment;
 import practice.board.domain.Member;
+import practice.board.exception.ApiException;
 import practice.board.repository.ArticleRepository;
 import practice.board.repository.CommentRepository;
 import practice.board.repository.MemberRepository;
+import practice.board.web.dto.comment.CommentResDto;
 
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+
+import static practice.board.exception.ErrorCode.*;
 
 @Service
 @RequiredArgsConstructor
@@ -20,28 +22,32 @@ import java.util.Optional;
 public class CommentService {
 
     private final CommentRepository commentRepository;
-    private final ArticleRepository articleRepository;
-    private final MemberRepository memberRepository;
+    private final ArticleService articleService;
+    private final MemberService memberService;
 
     /**
      * 저장
      */
+    //TODO Comment.createComment() 랑 코드 중복..... 그렇지만 괜찮은 것 같다.
     @Transactional
-    public Long save(Long articleId, Long memberId, String content, Long parentCommentId) {
-        Article article = articleRepository.findById(articleId);
-        Member member = memberRepository.findById(memberId).orElseThrow(() ->
-                new NoSuchElementException("해당 회원이 없습니다. memberId=" + memberId));
-        Comment parentComment = parentCommentId != null ? commentRepository.findById(parentCommentId).get() : null;
+    public Long saveComment(Long articleId, Long memberId, String content, Long parentCommentId) {
+        Article article = articleService.findById(articleId, false);
+        Member member = memberService.findById(memberId);
+        Comment parentComment = parentCommentId != null ? findById(parentCommentId) : null;
         Comment comment = Comment.createComment(article, member, content, parentComment);
-        return commentRepository.save(comment);
+
+        commentRepository.save(comment);
+        return comment.getId();
     }
 
+
     /**
-     * 수정
+     * 수정 (content)
      */
     @Transactional
     public void update(Long id, String content) {
-        commentRepository.update(id, content);
+        Comment comment = findById(id);
+        comment.updateContent(content);
     }
 
 
@@ -50,46 +56,44 @@ public class CommentService {
      */
     @Transactional
     public void delete(Long id) {
+        //comment 조회
+        Comment comment = findById(id);
 
-        Comment comment = commentRepository.findById(id).orElseThrow(() -> new NoSuchElementException("댓글이 없습니다."));
-
-        if (comment.isChildListEmpty()) {  //자식댓글 없는 경우
+        //자식댓글 없는 경우
+        if (comment.isChildListEmpty()) {
 
             Comment parentComment = comment.getParent();
 
-            while (parentComment != null && parentComment.isRemoved()) {  //부모댓글이 있고 화면상 삭제된 상태인 경우
+            //부모댓글이 있고 화면상 삭제된 상태인 경우
+            while (parentComment != null && parentComment.isRemoved()) {
                 Long parentId = parentComment.getId();
                 parentComment = parentComment.getParent();
-                commentRepository.deleteById(parentId);  //부모댓글 : db에서 삭제
+                commentRepository.deleteById(parentId);  //부모댓글 : db 에서 삭제
             }
 
-            commentRepository.deleteById(id);  //해당 댓글 : db에서 삭제
+            commentRepository.deleteById(id);  //해당 댓글 : db 에서 삭제
         }
-        else {  //자식댓글 있는 경우
+        //자식댓글 있는 경우
+        else {
             comment.tempDelete();  //해당 댓글 : 화면상 삭제
         }
     }
 
 
+    /**
+     * id로 조회
+     */
+    public Comment findById(Long id) {
+        return commentRepository.findById(id).orElseThrow(() ->
+                new ApiException(COMMENT_NOT_FOUND));
+    }
 
 
     /**
-     * 조회
+     * CommentResDto 로 변환
      */
-
-
-    /**
-     * 조회 (해당 article의 모든 comment 조회)
-     */
-    public List<Comment> findCommentsByArticleId(Long articleId) {
-        return commentRepository.findCommentsByArticleId(articleId);
-    }
-
-    public List<Comment> findComments() {
-        return commentRepository.findAll();
-    }
-
-    public Optional<Comment> findById(Long id) {
-        return commentRepository.findById(id);
+    public CommentResDto toCommentResDto(long commentId) {
+        Comment comment = findById(commentId);
+        return CommentResDto.from(comment);
     }
 }

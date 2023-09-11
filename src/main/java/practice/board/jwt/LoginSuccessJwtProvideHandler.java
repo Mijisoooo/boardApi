@@ -1,6 +1,5 @@
 package practice.board.jwt;
 
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -9,8 +8,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import practice.board.repository.MemberRepository;
-
-import java.io.IOException;
 
 
 @RequiredArgsConstructor
@@ -27,9 +24,13 @@ public class LoginSuccessJwtProvideHandler extends SimpleUrlAuthenticationSucces
         //JWT 발급
         String accessToken = jwtService.createAccessToken(username);
         String refreshToken = jwtService.createRefreshToken();
+
+        //응답 헤더로 access token, refresh token 보내기
         jwtService.sendAccessAndRefreshToken(response, accessToken, refreshToken);
 
+        //refresh token을 db에 저장
         memberRepository.findByUsername(username).ifPresent(member -> member.updateRefreshToken(refreshToken));
+
 
         log.info("로그인 성공. username: {}, accessToken, refreshToken 발급. accessToken: {}, refreshToken: {}", username, accessToken, refreshToken);
 

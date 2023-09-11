@@ -16,6 +16,8 @@ public enum ErrorCode {
 
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "허용되지 않은 메서드입니다."),
 
+    INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "파라미터에 가능한 값이 아닙니다."),
+
     LOGIN_FAILURE(UNAUTHORIZED, "로그인에 실패하였습니다. (아이디 혹은 비밀번호 오류)"),
 
     INVALID_TOKEN(UNAUTHORIZED, "토큰이 유효하지 않습니다."),
@@ -39,7 +41,22 @@ public enum ErrorCode {
 
     DUPLICATE_EMAIL_FOUND(CONFLICT, "이미 존재하는 email 입니다."),
 
-    DUPLICATE_NICKNAME_FOUND(CONFLICT, "이미 존재하는 nickname 입니다.");
+    DUPLICATE_NICKNAME_FOUND(CONFLICT, "이미 존재하는 nickname 입니다."),
+
+    FILE_NOT_SAVED(HttpStatus.BAD_REQUEST, "파일 저장에 실패하였습니다."),
+
+    FILE_NOT_FOUND(NOT_FOUND, "파일이 존재하지 않습니다."),
+
+    FILE_DELETION_FAILED(HttpStatus.BAD_REQUEST, "파일 삭제에 실패하였습니다."),
+
+    DISLIKEARTICLE_NOT_FOUND(HttpStatus.BAD_REQUEST, "싫어요한 적이 없는 게시글입니다."),  //TODO 메세지 수정 필요
+
+    SELF_LIKE_ARTICLE(HttpStatus.BAD_REQUEST, "본인 글에는 좋아요가 불가능합니다."),
+
+    SELF_DISLIKE_ARTICLE(HttpStatus.BAD_REQUEST, "본인 글에는 싫어요가 불가능합니다."),
+
+    LIKEARTICLE_NOT_FOUND(HttpStatus.BAD_REQUEST, "좋아요한 적이 없는 게시글입니다.");
+
 
 
 

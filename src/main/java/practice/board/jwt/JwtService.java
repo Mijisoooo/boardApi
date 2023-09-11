@@ -11,16 +11,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import practice.board.domain.Member;
 import practice.board.exception.ApiException;
+import practice.board.exception.ErrorCode;
 import practice.board.repository.MemberRepository;
 import practice.board.service.CustomUserDetailsService;
 
-import java.util.Date;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static practice.board.exception.ErrorCode.*;
 
@@ -50,6 +54,7 @@ public class JwtService {
     private static final String TOKEN_TYPE = "token_type";
     private static final String TOKEN_TYPE_VALUE = "refresh";
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String AUTHORITIES_KEY = "auth";
 
 
     private final MemberRepository memberRepository;
@@ -59,11 +64,14 @@ public class JwtService {
     public String createAccessToken(String username) {
 
         Date exp = new Date(System.currentTimeMillis() + accessTokenValidityInSeconds * 1000);
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
 
-        return Jwts.builder()  //JWT 토큰을 생성하는 빌더를 반환
-                .setSubject(username)  //payload "sub": username
+        //access token 생성해서 리턴
+        return Jwts.builder()
+                .setSubject(userDetails.getUsername())  //payload "sub": "username"
+                .claim(AUTHORITIES_KEY, userDetails.getAuthorities().toString())  //payload "auth": "USER"
                 .setExpiration(exp)  //payload "exp": 1416239232 (예시)
-                .signWith(key, SignatureAlgorithm.HS512)  //header "alg": "HS512" (HMAC512 알고리즘 사용하며 secret 키로 암호화)
+                .signWith(SignatureAlgorithm.HS512, key)  //header "alg": "HS512" (HMAC512 알고리즘 사용하며 secret 키로 암호화)
                 .compact();
     }
 
@@ -74,7 +82,7 @@ public class JwtService {
         return Jwts.builder()
                 .setExpiration(exp)
                 .claim(TOKEN_TYPE, TOKEN_TYPE_VALUE)  //payload "token_type": "refresh"
-                .signWith(key, SignatureAlgorithm.HS512)
+                .signWith(SignatureAlgorithm.HS512, key)
                 .compact();
     }
 
@@ -100,10 +108,6 @@ public class JwtService {
 
         response.setHeader(accessHeader, BEARER_PREFIX + accessToken);
         response.setHeader(refreshHeader, BEARER_PREFIX + refreshToken);
-
-//        Map<String, String> tokenMap = new HashMap<>();  //TODO 왜 tokenMap 만들지?
-//        tokenMap.put(ACCESS_TOKEN_SUBJECT, accessToken);
-//        tokenMap.put(REFRESH_TOKEN_SUBJECT, refreshToken);
     }
 
     public void sendAccessToken(HttpServletResponse response, String accessToken) {
@@ -111,9 +115,6 @@ public class JwtService {
         response.setStatus(HttpServletResponse.SC_OK);
 
         response.setHeader(accessHeader, BEARER_PREFIX + accessToken);
-
-//        Map<String, String> tokenMap = new HashMap<>();  //TODO 왜 tokenMap 만들지?
-//        tokenMap.put(ACCESS_TOKEN_SUBJECT, accessToken);
     }
 
     public Optional<String> extractAccessToken(HttpServletRequest request) {
@@ -140,10 +141,37 @@ public class JwtService {
         }
     }
 
+
+    /**
+     * SecurityContext 에 Authentication 객체 저장
+     */
+    public void saveAuthentication(String accessToken) {
+        Authentication authentication = getAuthentication(accessToken);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        log.info("authentication 생성 후 SecurityContext에 저장");
+    }
+
     /**
      * jwt 토큰에서 인증정보 조회해서 Authentication 객체 생성
      */
     public Authentication getAuthentication(String accessToken) {
+
+        //토큰 복호화
+        Claims claims = parseClaims(accessToken);
+
+        if (claims.get(AUTHORITIES_KEY) == null) {
+            throw new RuntimeException("권한 정보가 없는 토큰입니다.");
+        }
+
+/*
+        //claim 에서 권한 정보 가져오기
+        List<SimpleGrantedAuthority> authorities = Arrays.stream(claims.get(AUTHORITIES_KEY).toString().split(","))
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+
+        //UserDetails 객체를 만들어서 Authentication 리턴
+        UserDetails principal = new User(claims.getSubject(), "", authorities);
+*/
 
         String username = extractUsername(accessToken);
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);

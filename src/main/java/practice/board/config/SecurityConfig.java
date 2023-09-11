@@ -4,19 +4,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.ProviderManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.logout.LogoutFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.CorsUtils;
@@ -32,7 +29,7 @@ import static org.springframework.http.HttpMethod.*;
 @Configuration
 @RequiredArgsConstructor
 @EnableWebSecurity(debug = true)
-//@EnableMethodSecurity  //@PreAuthorize, @PostAuthorize, @Secured, @RolesAllowed 어노테이션 사용을 위해 추가
+@EnableMethodSecurity  //@PreAuthorize, @PostAuthorize, @Secured, @RolesAllowed 어노테이션 사용을 위해 추가
 public class SecurityConfig {
 
     private final ObjectMapper objectMapper;
@@ -43,7 +40,7 @@ public class SecurityConfig {
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
 
-    private final String[] whiteList = {"/", "/api/login"};
+    private final String[] whiteList = {"/", "/api/members/login"};
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -58,16 +55,22 @@ public class SecurityConfig {
                 //cors 설정
                 .cors(httpSecurityCorsConfigurer -> httpSecurityCorsConfigurer.configurationSource(corsConfigurationSource()))
 
+                //h2 db 사용
+                .headers(config -> config.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
+
                 //filter 추가
-                .addFilterAfter(jsonUsernamePasswordLoginFilter(), LogoutFilter.class)
-                .addFilterBefore(new JwtAuthenticationFilter(jwtService, memberRepository), JsonUsernamePasswordAuthenticationFilter.class)
+//                .addFilterAfter(jsonUsernamePasswordLoginFilter(), LogoutFilter.class)
+                .addFilterBefore(new JwtAuthenticationFilter(jwtService, memberRepository), UsernamePasswordAuthenticationFilter.class)
 
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()  //Preflight 요청 허용
-                        .requestMatchers(whiteList).permitAll()
+                        .requestMatchers(whiteList).permitAll()  //whiteList - 인증 필요 없음
+                        .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers(POST, "/api/members").permitAll()  //회원 가입 - 인증 필요 없음
-                        .requestMatchers(GET, "/api/members/**").hasRole("ADMIN")  //회원 조회 - ADMIN
-                        .requestMatchers(PATCH, "/api/members/{id}").access("@authService.hasId(authentication.)")
+//                        .requestMatchers(GET, "/api/members/**").hasRole("ADMIN")  //회원 조회 - ADMIN
+                        .requestMatchers(GET, "/api/articles/**").permitAll()  //글 조회 - 인증 필요 없음
+                        .requestMatchers(GET, "/api/comments/**").permitAll()  //댓글 조회 - 인증 필요 없음
+                        .requestMatchers(POST, "/api/articles").authenticated()  //글 작성 - 인증 필요 (권한 상관없음)
                         .anyRequest().authenticated())  //그 외 모든 요청은 인증 필요
 
                 .exceptionHandling(config -> config
@@ -104,6 +107,7 @@ public class SecurityConfig {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 
+    /*
     @Bean
     public JsonUsernamePasswordAuthenticationFilter jsonUsernamePasswordLoginFilter() {
         JsonUsernamePasswordAuthenticationFilter jsonUsernamePasswordLoginFilter
@@ -136,6 +140,6 @@ public class SecurityConfig {
     public LoginFailureHandler loginFailureHandler() {
         return new LoginFailureHandler();
     }
-
+*/
 
 }

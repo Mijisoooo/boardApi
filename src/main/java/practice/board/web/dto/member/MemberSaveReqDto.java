@@ -1,7 +1,7 @@
 package practice.board.web.dto.member;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.*;
@@ -16,7 +16,7 @@ import practice.board.domain.Member;
 @AllArgsConstructor
 public class MemberSaveReqDto {
 
-    @NotBlank
+    @NotBlank(message = "아이디를 입력해주세요.")
     private String username;  //아이디
 
     @NotBlank
@@ -28,23 +28,30 @@ public class MemberSaveReqDto {
     @Pattern(regexp = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,6}$", message = "이메일 형식으로 입력해주세요.")
     private String email;
 
-    @NotBlank
+    @NotBlank(message = "별명을 입력해주세요.")
     private String nickname;  //별명
 
-    @NotNull
     @Range(min = 1, max = 150)
     private Integer age;  //나이
 
     private Address address;  //주소
 
+
+    //== 변환 메서드 ==//
+    //MemberSaveReqDto -> Member
     public static Member from(MemberSaveReqDto dto) {
-        return Member.builder()
-                .username(dto.getUsername())
-                .password(dto.getPassword())
-                .email(dto.getEmail())
-                .nickname(dto.getNickname())
-                .age(dto.getAge())
-                .address(dto.getAddress())
+        return Member.createMember(dto.getUsername(), dto.getPassword(), dto.getEmail(), dto.getNickname(), dto.getAge(), dto.getAddress());
+    }
+
+    //Member -> MemberSaveReqDto
+    public static MemberSaveReqDto toDto(Member member) {
+        return MemberSaveReqDto.builder()
+                .username(member.getUsername())
+                .password(member.getPassword())
+                .email(member.getEmail())
+                .nickname(member.getNickname())
+                .age(member.getAge())
+                .address(member.getAddress())
                 .build();
     }
 

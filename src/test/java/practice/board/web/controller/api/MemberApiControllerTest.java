@@ -21,7 +21,6 @@ import practice.board.web.dto.member.MemberSaveReqDto;
 
 
 import static org.assertj.core.api.Assertions.*;
-import static org.springframework.http.HttpStatus.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -82,7 +81,7 @@ class MemberApiControllerTest {
 
         Member member = memberRepository.findByUsername(username).orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
         assertThat(member.getEmail()).isEqualTo(email);
-        assertThat(memberRepository.findAll().size()).isEqualTo(1);
+        assertThat(memberRepository.findAll(null, null).size()).isEqualTo(1);
 
     }
 
@@ -102,7 +101,7 @@ class MemberApiControllerTest {
 
         assertThatThrownBy(() -> memberRepository.findByUsername(username).orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND)))
                 .isInstanceOf(ApiException.class);
-        assertThat(memberRepository.findAll().size()).isEqualTo(0);
+        assertThat(memberRepository.findAll(null, null).size()).isEqualTo(0);
 
     }
 
@@ -121,7 +120,7 @@ class MemberApiControllerTest {
 
         assertThatThrownBy(() -> memberRepository.findByUsername(username).orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND)))
                 .isInstanceOf(ApiException.class);
-        assertThat(memberRepository.findAll().size()).isEqualTo(0);
+        assertThat(memberRepository.findAll(null, null).size()).isEqualTo(0);
     }
 
     @DisplayName("회원가입 실패 - nickname null")
@@ -139,7 +138,7 @@ class MemberApiControllerTest {
 
         assertThatThrownBy(() -> memberRepository.findByUsername(username).orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND)))
                 .isInstanceOf(ApiException.class);
-        assertThat(memberRepository.findAll().size()).isEqualTo(0);
+        assertThat(memberRepository.findAll(null, null).size()).isEqualTo(0);
     }
 
 

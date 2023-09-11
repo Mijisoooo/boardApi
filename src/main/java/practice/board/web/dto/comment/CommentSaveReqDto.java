@@ -1,13 +1,22 @@
 package practice.board.web.dto.comment;
 
-import lombok.Data;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import lombok.*;
 
 @Data
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 public class CommentSaveReqDto {
 
+    @NotNull
     private Long articleId;
-    private Long writerId;
+
+    @NotBlank
     private String content;
 
+    private Long parentId;
 
 }

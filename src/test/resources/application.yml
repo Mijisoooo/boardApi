@@ -2,3 +2,54 @@ spring:
 
   profiles:
     include: jwt
+
+  datasource:
+    driver-class-name: org.h2.Driver  #database로 H2 사용
+    username: sa
+
+  h2:
+    console:
+      enabled: true  #H2 콘솔 활성화
+
+  servlet:
+    multipart:
+      max-request-size: 5MB
+      max-file-size: 2MB
+
+  jpa:
+    defer-datasource-initialization: true  #hibernate 초기화 후 script 파일 동작
+    open-in-view: false
+#    show-sql: true
+    properties:
+      hibernate:
+        default_batch_fetch_size: 100
+#        hbm2dll.auto: create
+    #        format_sql: true
+#        use_sql_comments: true
+
+    hibernate:
+      ddl-auto: create  #hbm2ddl.auto: create 와 비슷
+
+
+
+
+  logging.level:
+    org:
+      springframework.security: debug
+#      hibernate:
+#        SQL: debug  #logger 출력 (spring.jpa.properties.hibernate.show_sql=true 와 기능 동일하지만 show_sql 은 System.out 출력)
+#        type: trace  #파라미터 바인딩 출력
+
+
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: true
+      multiline: true
+      logging: slf4j
+
+
+
+
+
+

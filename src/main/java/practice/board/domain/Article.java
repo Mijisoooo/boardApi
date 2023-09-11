@@ -2,27 +2,33 @@ package practice.board.domain;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static jakarta.persistence.CascadeType.*;
 import static jakarta.persistence.FetchType.*;
+import static lombok.AccessLevel.*;
 
 @Entity
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@EqualsAndHashCode(of = "id")
+@NoArgsConstructor(access = PROTECTED)
+@AllArgsConstructor(access = PRIVATE)
+@Builder(access = PRIVATE)
 public class Article extends BaseTimeEntity {
 
-    @Id @GeneratedValue
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "article_id")
     private Long id;
 
     @ManyToOne(fetch = LAZY)
     @JoinColumn(name = "member_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)  //??
     private Member writer;
 
     @Column(length = 50)
@@ -35,13 +41,21 @@ public class Article extends BaseTimeEntity {
 
     private String filePath;
 
+//    @ManyToOne(fetch = LAZY)
+//    @JoinColumn(name = "category_id")
+//    @NotNull
+//    private Category category;
+
+    @ColumnDefault("0")
     private int viewCount;
 
+    @ColumnDefault("0")
     private int likes;
 
+    @ColumnDefault("0")
     private int dislikes;
 
-
+    @Builder.Default
     @OneToMany(mappedBy = "article", cascade = ALL, orphanRemoval = true)  //게시글 삭제 시 해당 게시글의 댓글도 모두 삭제됨
     private List<Comment> commentList = new ArrayList<>();
 
@@ -75,32 +89,60 @@ public class Article extends BaseTimeEntity {
 
 
     //== 생성메서드 ==//
+    //TODO 아래 메서드 (member를 인수로 받는) 사용 XXX (없애고 싶은데 없애려면 ArticleRepositoryTest 코드 수정 필요)
+    //TODO -> ArticleService 의 saveArticle() 과 중복 느낌
     public static Article createArticle(Member member, String title, String content) {
-        Article article = new Article();
+        Article article = Article.builder()
+                .title(title)
+                .content(content)
+                .build();
+
         article.setWriter(member);
-        article.title = title;
-        article.content = content;
-        article.viewCount = 0;  //TODO 꼭 설정할 필요 없을듯? (디폴트 설정?)
-        article.likes = 0;
-        article.dislikes = 0;
+
         return article;
     }
 
+    public static Article createArticle(String title, String content) {
+        Article article = Article.builder()
+                .title(title)
+                .content(content)
+                .build();
+
+        return article;
+    }
+
+//    public static Article createArticle(Category category, String title, String content) {
+//        Article article = Article.builder()
+//                .category(category)
+//                .title(title)
+//                .content(content)
+//                .build();
+//
+//        return article;
+//    }
+
+
+
 
     //== 비즈니스 로직 ==//
-    public int addViewCount() {
-        viewCount += 1;
-        return viewCount;
+    public void increaseViewCount() {
+        this.viewCount += 1;
     }
 
-    public int addLikes() {
-        likes++;
-        return likes;
+    public void increaseLikes() {
+        this.likes += 1;
     }
 
-    public int addDislikes() {
-        dislikes++;
-        return dislikes;
+    public void decreaseLikes() {
+        this.likes -= 1;
+    }
+
+    public void increaseDislikes() {
+        this.dislikes += 1;
+    }
+
+    public void decreaseDislikes() {
+        this.dislikes -= 1;
     }
 
 

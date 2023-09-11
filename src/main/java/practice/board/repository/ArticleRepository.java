@@ -1,76 +1,128 @@
 package practice.board.repository;
 
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import practice.board.domain.Article;
+import practice.board.domain.ArticleSearchCond;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
-@Repository
-@RequiredArgsConstructor
-public class ArticleRepository {
+import static practice.board.domain.QArticle.*;
 
-    private final EntityManager em;
-
-    /**
-     * 저장
-     */
-    public Long save(Article article) {
-        em.persist(article);
-        return article.getId();
-    }
-
-    /**
-     * id로 조회
-     */
-    public Article findById(Long id) {
-        return em.find(Article.class, id);
-    }
+//@Repository
+//@Transactional(readOnly = true)
+public interface ArticleRepository extends JpaRepository<Article, Long>, ArticleRepositoryCustom {
 
 
-    /**
-     * 전체 조회
-     */
-    public List<Article> findAll() {
-        return em.createQuery("select a from Article a", Article.class)
-                .getResultList();
-    }
+    @EntityGraph(attributePaths = {"writer"})  //fetch join
+    Optional<Article> findById(long id);
 
 
-    /**
-     * 검색조건으로 조회 - 동적쿼리 사용
-     */
+    List<Article> findByWriter(Long memberId);
 
 
-    /**
-     * 수정 (title, content, filePath (제목, 내용, 첨부파일) 만 수정 가능)
-     */
-//    public void update(Long id, Article updateParam) {
-//        Article article = findById(id);
-//        article.update(updateParam.getTitle(), updateParam.getContent());
+
+
+//    /**
+//     * 검색 - title, content, nickname
+//     */
+//    public Map<String, Object> findAllByCond(ArticleSearchCond cond, int size, int page, String sort, Boolean desc) {
+//
+//        String title = cond.getTitle();
+//        String content = cond.getContent();
+//        String nickname = cond.getNickname();
+//
+//        Map<String, Object> resultMap = new HashMap<>();
+//
+//
+//        //전체 데이터 수
+//        int totalElements = Math.toIntExact(query.select(article.count())
+//                .from(article)
+//                .where(likeTitle(title), likeContent(content), likeNickname(nickname))
+//                .fetchFirst());
+//
+//        //전체 페이지 수
+//        int totalPages = (int) Math.ceil((double) totalElements / size);
+//
+//        //현재 페이지의 데이터
+//        List<Article> resultData = query.select(article)
+//                .from(article)
+//                .where(likeTitle(title), likeContent(content), likeNickname(nickname))
+//                .offset((long) page * size)
+//                .limit(size)
+//                .orderBy(sortBy(sort, desc))
+//                .fetch();
+//
+//
+//        resultMap.put("size", size);  //페이지 당 데이터 수
+//        resultMap.put("numOfElements", resultData.size());  //현재 페이지의 데이터 수
+//        resultMap.put("totalElements", totalElements);  //전체 데이터 수
+//        resultMap.put("totalPages", totalPages);  //전체 페이지 수
+//        resultMap.put("resultData", resultData);  //현재 페이지의 데이터
+//
+//        return resultMap;
+//
 //    }
-
-
-
-    /**
-     * 수정 (title, content, filePath 를 파라미터로 받음)
-     */
-    public void update(Long id, String newTitle, String newContent, String newFilePath) {
-        Article article = findById(id);
-        article.updateTitle(newTitle);
-        article.updateContent(newContent);
-        article.updateFilePath(newFilePath);
-    }
-
-
-    /**
-     * id로 삭제
-     */
-    public void deleteById(Long id) {
-        Article findArticle = findById(id);
-        em.remove(findArticle);
-    }
-
+//
+//    private OrderSpecifier<?> sortBy(String sort, Boolean desc) {
+//
+//        OrderSpecifier<?> order = null;
+//        Order orderDirection = desc ? Order.DESC : Order.ASC;
+//
+//        switch (sort.toLowerCase()) {
+//            case "id":
+//                order = new OrderSpecifier<>(orderDirection, article.id);
+//                break;
+//            case "viewcount" :
+//                order = new OrderSpecifier<>(orderDirection, article.viewCount);
+//                break;
+//            case "likes" :
+//                order = new OrderSpecifier<>(orderDirection, article.likes);
+//                break;
+//            case "dislikes" :
+//                order = new OrderSpecifier<>(orderDirection, article.dislikes);
+//                break;
+//            case "createddate" :
+//                order = new OrderSpecifier<>(orderDirection, article.createdAt);
+//                break;
+//        }
+//
+//        return order;
+//
+//    }
+//
+//    private BooleanExpression likeTitle(String title) {
+//        if (StringUtils.hasText(title)) {
+//            return article.title.contains(title);
+//        }
+//        return null;
+//    }
+//
+//    private BooleanExpression likeContent(String content) {
+//        if (StringUtils.hasText(content)) {
+//            return article.content.contains(content);
+//        }
+//        return null;
+//    }
+//
+//    private BooleanExpression likeNickname(String nickname) {
+//        if (StringUtils.hasText(nickname)) {
+//            return article.writer.nickname.contains(nickname);
+//        }
+//        return null;
+//    }
 
 }
